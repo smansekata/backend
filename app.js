@@ -19,9 +19,6 @@ const db = admin.database();
 app.use(express.json());
 app.use(express.static('public'));
 app.use(cookieParser());
-app.use(cors({
-    origin: process.env.FRONTEND_URL
-}));
 const io = new Server(server, {
     cors: {
     origin: process.env.FRONTEND_URL,
@@ -35,7 +32,7 @@ let totalSuara = {}
 db.ref("totalSuara").on("value", (suara) => {
     totalSuara.sah = suara.val().sah;
     totalSuara.tidakSah = suara.val().tidakSah;
-    totalSuara.pemilih = suara.val().pemilih;
+    totalSuara.pemilih = suara.val().sah + suara.val().tidakSah;
         io.emit('total suara', totalSuara);
 
 });
@@ -71,14 +68,19 @@ io.on('connection', socket => {
     });
 
     socket.on('vote', (data) => {
-        console.log("hai");
-        data.forEach((vote, index) => {
-            if(vote){
-                db.ref(dbEndpoints[index]).update({
-                    suara: dataChart[index] + 1
-                })
-            }
-        });
+        if(data == "invalid"){
+            db.ref("totalSuara").update({
+                tidakSah: totalSuara.tidakSah + 1,
+            });
+        } else {
+            data.forEach((vote, index) => {
+                if(vote){
+                    db.ref(dbEndpoints[index]).update({
+                        suara: dataChart[index] + 1
+                    })
+                }
+            });
+        }
     })
 
 });
@@ -87,6 +89,6 @@ app.get('/', (req, res) => {
     res.send('test');
 });
 
-server.listen(process.env.PORT, () => {
+server.listen(3000, () => {
     console.log("** server running **");
 });

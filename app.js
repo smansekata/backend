@@ -1,0 +1,100 @@
+require('dotenv').config();
+const express = require('express');
+const cookieParser = require('cookie-parser');
+const jwt = require('jsonwebtoken');
+const app = express();
+const server = require('http').createServer(app);
+const {Server} = require('socket.io');
+const cors = require('cors');
+const admin = require('firebase-admin');
+
+// FIREBASE RTDB
+const serviceAccount = JSON.parse(process.env.FIREBASE_CRED);
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    databaseURL: "https://sekata-quick-count-default-rtdb.firebaseio.com"
+})
+const db = admin.database();
+
+app.use(express.json());
+app.use(express.static('public'));
+app.use(cookieParser());
+app.use(cors({
+    origin: process.env.FRONTEND_URL
+}));
+const io = new Server(server, {
+    cors: {
+    origin: process.env.FRONTEND_URL,
+    methods: ["GET", "POST"]
+  }
+})
+
+let dataChart = [];
+let totalSuara = {}
+
+db.ref("totalSuara").on("value", (suara) => {
+    totalSuara.sah = suara.val().sah;
+    totalSuara.tidakSah = suara.val().tidakSah;
+    totalSuara.pemilih = suara.val().pemilih;
+        io.emit('total suara', totalSuara);
+
+});
+db.ref("kandidat").on("value", (snapshot) => {
+    dataChart = [
+        snapshot.val().pertama.suara,
+        snapshot.val().kedua.suara,
+        snapshot.val().ketiga.suara,
+        snapshot.val().keempat.suara,
+        snapshot.val().kelima.suara,
+    ];    
+    totalSuara.sah = dataChart.reduce((acc, curr) => acc + curr, 0);
+    db.ref("totalSuara").update({
+        sah: totalSuara.sah,
+        pemilih: totalSuara.sah + totalSuara.tidakSah, 
+    });
+    io.emit('updateChart', dataChart);
+});
+
+let dbEndpoints = [
+    'kandidat/pertama',
+    'kandidat/kedua',
+    'kandidat/ketiga',
+    'kandidat/keempat',
+    'kandidat/kelima'
+]
+io.on('connection', socket => {
+    io.emit('updateChart', dataChart);    
+    io.emit('total suara', totalSuara);
+    console.log(socket.id);
+    socket.on('disconnect', () => {
+        console.log("disconnected");
+    });
+
+    socket.on('vote', (data) => {
+        console.log("hai");
+        data.forEach((vote, index) => {
+            if(vote){
+                db.ref(dbEndpoints[index]).update({
+                    suara: dataChart[index] + 1
+                })
+            }
+        });
+    })
+
+});
+
+// app.get('/', (req, res) => {
+//     res.render('page/chart', {
+//         layout: "layouts/mainLayout"
+//     });
+// });
+
+// app.get('/entry', (req,res) => {
+//     res.render('page/entry', {
+//         layout: "layouts/mainLayout"
+//     });
+// });
+
+server.listen(3000, () => {
+    console.log("** server running **");
+});

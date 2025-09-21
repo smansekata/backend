@@ -84,7 +84,7 @@ io.on('connection', socket => {
 });
 
 app.get('/', (req, res) => {
-    res.json('test')
+    res.send('test');
 });
 
 server.listen(process.env.PORT, () => {

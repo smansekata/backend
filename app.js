@@ -83,17 +83,9 @@ io.on('connection', socket => {
 
 });
 
-// app.get('/', (req, res) => {
-//     res.render('page/chart', {
-//         layout: "layouts/mainLayout"
-//     });
-// });
-
-// app.get('/entry', (req,res) => {
-//     res.render('page/entry', {
-//         layout: "layouts/mainLayout"
-//     });
-// });
+app.get('/', (req, res) => {
+    res.json('test')
+});
 
 server.listen(3000, () => {
     console.log("** server running **");

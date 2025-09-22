@@ -21,7 +21,7 @@ app.use(express.static('public'));
 app.use(cookieParser());
 const io = new Server(server, {
     cors: {
-    origin: process.env.FRONTEND_URL,
+    // origin: process.env.FRONTEND_URL,
     methods: ["GET", "POST"]
   }
 })
@@ -85,8 +85,20 @@ io.on('connection', socket => {
 
 });
 
+
 app.get('/', (req, res) => {
     res.send('test');
+});
+
+app.post('/api/reset/suara', (req,res)=>{
+    db.ref('kandidat').update({
+        pertama: {suara: 0},
+        kedua: {suara: 0},
+        ketiga: {suara: 0},
+        keempat: {suara: 0},
+        kelima: {suara: 0},
+    });
+    res.json({msg: "data reseted"})
 });
 
 server.listen(3000, () => {
